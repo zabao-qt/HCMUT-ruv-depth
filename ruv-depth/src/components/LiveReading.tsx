@@ -29,7 +29,7 @@ export default function LiveReading({ current }: Props) {
 
         <div className="p-4 rounded-lg bg-gradient-to-r from-emerald-600 to-green-500 text-white shadow-lg flex flex-col justify-center items-center">
           <div className="text-sm opacity-90">Pressure</div>
-          <div className="text-3xl font-bold mt-2">{pressure !== null && pressure !== undefined ? `${pressure}MPa` : '—'}</div>
+          <div className="text-3xl font-bold mt-2">{pressure !== null && pressure !== undefined ? `${pressure.toFixed(2)}MPa` : '—'}</div>
         </div>
       </div>
 

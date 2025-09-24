@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
-import { appendPoint, getPoints } from '../services/api';
+import { appendPoint, deletePoints, getPoints } from '../services/api';
 import type { SensorPoint } from '../types/sensors';
 import type { Profile } from '../types/profiles';
 
@@ -27,6 +27,7 @@ export default function ProfileDashboard() {
   const [saving, setSaving] = useState(false);
   const [points, setPoints] = useState<SensorPoint[]>([]); // recorded points
   const [livePoints, setLivePoints] = useState<SensorPoint[]>([]); // streaming points (for chart & map)
+  const [showRecorded, setShowRecorded] = useState<boolean>(false);
 
   // load recorded points on mount / profile change
   useEffect(() => {
@@ -158,6 +159,33 @@ export default function ProfileDashboard() {
     } finally { setSaving(false); }
   };
 
+  const handleDeletePoint = async (p: SensorPoint) => {
+    const pointId = (p as any)._id;
+    if (!pointId) {
+      // fallback: if no id use local remove from UI
+      setPoints(prev => prev.filter(x => x !== p));
+      return;
+    }
+
+    if (!profileId) return;
+
+    // optimistic UI: remove locally first
+    setPoints(prev => prev.filter(x => ((x as any).id ?? (x as any)._id) !== pointId));
+
+    try {
+      await deletePoints(profileId, pointId);
+      // success: nothing else to do (already removed)
+    } catch (err) {
+      console.error('delete point err', err);
+      alert('Failed to delete point on server — restore in UI');
+      // restore (simple approach: refetch points)
+      try {
+        const res = await getPoints(profileId, 200);
+        setPoints(res.data.points || []);
+      } catch (_) {}
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto p-6">
       <div className="bg-white p-6 rounded shadow">
@@ -192,6 +220,13 @@ export default function ProfileDashboard() {
             >
               {saving ? 'Saving...' : 'Measure (append)'}
             </button>
+            <button
+              onClick={() => setShowRecorded(s => !s)}
+              className={`px-4 py-2 rounded shadow ${showRecorded ? 'bg-indigo-600 text-white' : 'bg-gray-200 text-gray-800'}`}
+              title="Toggle recorded points on map"
+            >
+              {showRecorded ? 'Hide recorded' : 'Show recorded'}
+            </button>
           </div>
         </header>
 
@@ -199,7 +234,7 @@ export default function ProfileDashboard() {
           <div className="col-span-1">
             <LiveReading current={current} />
             <div className="mt-4">
-              <RecentPoints points={points} />
+              <RecentPoints points={points} onDelete={handleDeletePoint} />
             </div>
           </div>
 
@@ -209,7 +244,7 @@ export default function ProfileDashboard() {
             </div>
 
             <div className="h-96 bg-white p-2 rounded shadow">
-              <LiveMap data={livePoints} />
+              <LiveMap liveData={livePoints} recordedData={showRecorded ? points : []} />
             </div>
           </div>
         </div>

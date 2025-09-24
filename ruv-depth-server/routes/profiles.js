@@ -54,4 +54,26 @@ router.get('/:id/points', authMiddleware, async (req,res) => {
   res.json({ points });
 });
 
+router.delete('/:profileId/points/:pointId', authMiddleware, async (req, res) => {
+  const { profileId, pointId } = req.params;
+
+  // check ownership of profile first
+  const profile = await Profile.findOne({ _id: profileId, userId: req.userId });
+  if (!profile) {
+    return res.status(404).json({ error: 'Profile not found' });
+  }
+
+  const point = await Point.findOneAndDelete({
+    _id: pointId,
+    profileId: profile._id,
+    userId: req.userId
+  });
+
+  if (!point) {
+    return res.status(404).json({ error: 'Point not found' });
+  }
+
+  res.json({ ok: true, deletedId: pointId });
+});
+
 export default router;

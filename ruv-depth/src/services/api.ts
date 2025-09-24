@@ -26,6 +26,7 @@ export const createProfile = (title:string, description?:string) => api.post('/p
 export const listProfiles = () => api.get('/profiles');
 export const deleteProfile = (id:string) => api.delete(`/profiles/${id}`);
 export const appendPoint = (profileId:string, point:any) => api.post(`/profiles/${profileId}/points`, point);
+export const deletePoints = (profileId:string, pointId:string) => api.delete(`/profiles/${profileId}/points/${pointId}`);
 export const getPoints = (profileId:string, limit=200) => api.get(`/profiles/${profileId}/points?limit=${limit}`);
 
 export const registerDevice = (name: string, feeds?: Record<string,string>) => api.post('/devices', { name, feeds });

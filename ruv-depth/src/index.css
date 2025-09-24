@@ -1,2 +1,5 @@
 @import "tailwindcss";
 @import 'leaflet/dist/leaflet.css';
+.leaflet-marker-icon.recorded-hue {
+  filter: hue-rotate(300deg) saturate(2); /* purplish/red tone */
+}

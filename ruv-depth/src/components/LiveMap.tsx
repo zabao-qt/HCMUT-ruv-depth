@@ -12,7 +12,10 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png'
 });
 
-type Props = { data: SensorPoint[] };
+type Props = {
+  liveData: SensorPoint[];
+  recordedData?: SensorPoint[];
+};
 
 function MapBoundsController({ positions }: { positions: L.LatLngExpression[] }) {
   const map = useMap();
@@ -45,23 +48,42 @@ function MapBoundsController({ positions }: { positions: L.LatLngExpression[] })
   return null;
 }
 
-export default function LiveMap({ data }: Props) {
-  // newest-first -> center map on most recent point that has lat/lon
-  const firstWithCoord = data.find(p => p.latitude != null && p.longitude != null) ?? null;
+export default function LiveMap({ liveData, recordedData = [] }: Props) {
+  // pick an initial center: most recent live point first, else recorded, else 0,0
+  const firstWithCoord =
+    liveData.find(p => p.latitude != null && p.longitude != null)
+    ?? recordedData.find(p => p.latitude != null && p.longitude != null)
+    ?? null;
+
   const initialCenter: [number, number] = firstWithCoord ? [firstWithCoord.latitude as number, firstWithCoord.longitude as number] : [0, 0];
 
-  // Build markers (filter null coords). We take up to 200 points and reverse so older -> newer ordering on polyline
-  const markers = useMemo(() => {
-    return data
+  // prepare live markers (limit and order)
+  const liveMarkers = useMemo(() => {
+    return liveData
       .filter(p => p.latitude != null && p.longitude != null)
       .slice(0, 200)
+      .reverse(); // oldest -> newest (polyline order)
+  }, [liveData]);
+
+  // recorded markers (displayed when passed)
+  const recordedMarkers = useMemo(() => {
+    return (recordedData || [])
+      .filter(p => p.latitude != null && p.longitude != null)
+      .slice(0, 1000) // allow more recorded points if desired
       .reverse();
-  }, [data]);
+  }, [recordedData]);
 
-  // lat/lng tuples for polyline & bounds controller
-  const positions = useMemo(() => markers.map(p => [p.latitude as number, p.longitude as number] as L.LatLngExpression), [markers]);
+  const livePositions = useMemo(() => liveMarkers.map(p => [p.latitude as number, p.longitude as number] as L.LatLngExpression), [liveMarkers]);
+  const recordedPositions = useMemo(() => recordedMarkers.map(p => [p.latitude as number, p.longitude as number] as L.LatLngExpression), [recordedMarkers]);
 
-  const polyline: L.LatLngTuple[] = useMemo(() => positions.map(pos => [pos as L.LatLngTuple][0]), [positions]);
+  const polyline: L.LatLngTuple[] = useMemo(() => livePositions.map(pos => [pos as L.LatLngTuple][0]), [livePositions]);
+  
+  // choose combined positions for bounds: prefer livePositions, but include recorded if present and follow mode is off
+  const combinedForBounds = useMemo(() => {
+    // If there are live positions, center/focus on those; otherwise use recorded
+    if (livePositions.length > 0) return livePositions;
+    return recordedPositions;
+  }, [livePositions, recordedPositions]);
 
   return (
     <div className="w-full h-full rounded">
@@ -69,18 +91,18 @@ export default function LiveMap({ data }: Props) {
         center={initialCenter}
         zoom={firstWithCoord ? 12 : 2}
         style={{ height: '100%', width: '100%', borderRadius: 8 }}
-        maxZoom={22}
-        // when using fitBounds later, keep scrollWheelZoom and other props as you like
       >
-        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maxZoom={19} />
+        <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
 
-        {/* Tell the map to recenter/fit whenever positions change */}
-        <MapBoundsController positions={positions} />
+        {/* controller uses the combined positions to fit/center the map */}
+        <MapBoundsController positions={combinedForBounds} />
 
-        {markers.map((p, idx) => (
-          <Marker key={idx} position={[p.latitude as number, p.longitude as number]}>
-            <Tooltip direction="top" offset={[0, -8]} opacity={0.9}>
+        {/* live markers (blue marker icons) */}
+        {liveMarkers.map((p, idx) => (
+          <Marker key={`live-${idx}`} position={[p.latitude as number, p.longitude as number]}>
+            <Tooltip direction="top" offset={[0, -8]} opacity={0.95}>
               <div className="text-xs">
+                <div className="font-semibold text-blue-600">Live</div>
                 <div>Depth: {p.sonarDepth ?? '—'} m</div>
                 <div>Pressure: {p.pressure ?? '—'}</div>
                 <div className="text-gray-500">{new Date(p.timestamp).toLocaleString()}</div>
@@ -89,7 +111,31 @@ export default function LiveMap({ data }: Props) {
           </Marker>
         ))}
 
-        {polyline.length > 1 && <Polyline positions={polyline} color="#1e40af" weight={2} opacity={0.7} />}
+        {/* recorded markers (red circle markers) */}
+        {recordedMarkers.map((p, idx) => (
+          <Marker
+            key={`rec-${idx}`}
+            position={[p.latitude as number, p.longitude as number]}
+            eventHandlers={{
+              add: (e) => {
+                const iconEl = (e.target as any)._icon as HTMLElement | null;
+                if (iconEl) iconEl.classList.add("recorded-hue");
+              },
+            }}
+          >
+            <Tooltip direction="top" offset={[0, -8]} opacity={0.95}>
+              <div className="text-xs">
+                <div className="font-semibold text-red-600">Recorded</div>
+                <div>Depth: {p.sonarDepth ?? '—'} m</div>
+                <div>Pressure: {p.pressure ?? '—'}</div>
+                <div className="text-gray-500">{new Date(p.timestamp).toLocaleString()}</div>
+              </div>
+            </Tooltip>
+          </Marker>
+        ))}
+
+        {/* polyline only for live data */}
+        {polyline.length > 1 && <Polyline positions={polyline} color="#1e40af" weight={2} opacity={0.85} />}
       </MapContainer>
     </div>
   );
