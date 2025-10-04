@@ -8,7 +8,7 @@ export default function Home() {
   return (
     <div className="max-w-4xl mx-auto p-6">
       <h1 className="text-3xl font-bold mb-2">RUV Depth Mapper</h1>
-      <p className="text-gray-600 mb-6">Collect underwater depth points using your ESP32 and view them per-profile.</p>
+      <p className="text-gray-600 mb-6">Collect underwater depth points with RUV and view them per-profile.</p>
 
       {!user ? (
         <div className="space-x-4">

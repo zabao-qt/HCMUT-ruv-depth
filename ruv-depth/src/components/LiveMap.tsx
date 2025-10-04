@@ -103,7 +103,7 @@ export default function LiveMap({ liveData, recordedData = [] }: Props) {
             <Tooltip direction="top" offset={[0, -8]} opacity={0.95}>
               <div className="text-xs">
                 <div className="font-semibold text-blue-600">Live</div>
-                <div>Depth: {p.sonarDepth ?? '—'} m</div>
+                <div>Sonar Depth: {p.sonarDepth ?? '—'} m</div>
                 <div>Pressure: {p.pressure ?? '—'}</div>
                 <div className="text-gray-500">{new Date(p.timestamp).toLocaleString()}</div>
               </div>
@@ -126,7 +126,7 @@ export default function LiveMap({ liveData, recordedData = [] }: Props) {
             <Tooltip direction="top" offset={[0, -8]} opacity={0.95}>
               <div className="text-xs">
                 <div className="font-semibold text-red-600">Recorded</div>
-                <div>Depth: {p.sonarDepth ?? '—'} m</div>
+                <div>Sonar Depth: {p.sonarDepth ?? '—'} m</div>
                 <div>Pressure: {p.pressure ?? '—'}</div>
                 <div className="text-gray-500">{new Date(p.timestamp).toLocaleString()}</div>
               </div>
@@ -135,7 +135,7 @@ export default function LiveMap({ liveData, recordedData = [] }: Props) {
         ))}
 
         {/* polyline only for live data */}
-        {polyline.length > 1 && <Polyline positions={polyline} color="#1e40af" weight={2} opacity={0.85} />}
+        {/* {polyline.length > 1 && <Polyline positions={polyline} color="#1e40af" weight={2} opacity={0.85} />} */}
       </MapContainer>
     </div>
   );

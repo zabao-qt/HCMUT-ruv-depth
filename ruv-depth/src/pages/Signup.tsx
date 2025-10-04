@@ -1,13 +1,15 @@
 // src/pages/Signup.tsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { sendOtp } from '../services/api';
 
 export default function Signup() {
   const { signup } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -17,9 +19,13 @@ export default function Signup() {
     setLoading(true);
     try {
       await signup(email, password);
-      navigate('/');
+      localStorage.setItem('signup_email', email);
+      await sendOtp(email);
+      setStatus('Account created. Verification code sent.');
+      navigate('/verify');
     } catch (err: any) {
       setError(err.message || 'Failed to create account');
+      setStatus(err?.response?.data?.error || 'Signup failed');
     } finally {
       setLoading(false);
     }
@@ -55,6 +61,7 @@ export default function Signup() {
           {loading ? 'Creating...' : 'Create account'}
         </button>
       </form>
+      {status && <p className="mt-3 text-sm text-gray-600">{status}</p>}
     </div>
   );
 }

@@ -50,8 +50,8 @@ const float SONAR_MIN = 0.1;
 const float SONAR_MAX = 6.0;
 const float SONAR_STEP = 0.1;
 
-const double LAT_STEP = 0.002;
-const double LON_STEP = 0.002;
+const double LAT_STEP = 0.0002;
+const double LON_STEP = 0.0002;
 
 // State
 float currentPressure;
@@ -107,8 +107,8 @@ void connectMQTT() {
     } else {
       Serial.print("failed, rc=");
       Serial.print(mqtt.state());
-      Serial.println(" - retrying in 5s");
-      delay(5000);
+      Serial.println(" - retrying in 10s");
+      delay(10000);
     }
   }
 }

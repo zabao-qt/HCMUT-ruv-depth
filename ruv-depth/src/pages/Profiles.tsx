@@ -136,7 +136,7 @@ export default function Profiles() {
                 return (
                   <div key={id} className="p-4 bg-gray-50 rounded shadow-sm flex justify-between">
                     <div>
-                      <Link to={`/profiles/${id}`} className="text-lg font-semibold text-blue-600 hover:underline">
+                      <Link to={`/profiles/${id}`} state={{ profile: p }} className="text-lg font-semibold text-blue-600 hover:underline">
                         {p.title}
                       </Link>
                       <p className="text-sm text-gray-600 mt-1">{p.description}</p>

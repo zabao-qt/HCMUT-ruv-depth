@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FiTrash2 } from 'react-icons/fi';
 import type { SensorPoint } from '../types/sensors';
+import { pressureToDepth } from '../utils/convert';
 
 type Props = {
   points: SensorPoint[];
@@ -68,14 +69,27 @@ export default function RecentPoints({ points, onDelete, className = '' }: Props
                   </div>
 
                   <div className="mt-1 flex items-center gap-3">
-                    <div className="inline-flex items-center rounded-md bg-sky-50 px-2 py-1 text-xs font-medium text-sky-700">
-                      Depth
-                      <span className="ml-2 font-semibold text-sky-900">{p.sonarDepth ?? '—'} m</span>
-                    </div>
+                    {(() => {
+                      const sonar = p.sonarDepth ?? null;
+                      const pressure = p.pressure ?? null;
+                      const pressureDepth = pressureToDepth(pressure);
+                      const useTotal = pressure != null && pressure >= 0.02;
 
-                    <div className="inline-flex items-center rounded-md bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700">
+                      const depthVal = useTotal && sonar != null && pressureDepth != null
+                        ? (sonar + pressureDepth).toFixed(2) + ' m'
+                        : (sonar != null ? `${sonar}m` : '—');
+
+                      return (
+                        <div className="text-xs font-medium text-sky-700">
+                          {useTotal ? 'Total Depth' : 'Depth'}
+                          <span className="ml-2 font-semibold text-sky-900">{depthVal}</span>
+                        </div>
+                      );
+                    })()}
+
+                    <div className="text-xs font-medium text-amber-700">
                       Pressure
-                      <span className="ml-2 font-semibold text-amber-900">{p.pressure ?? '—'} MPa</span>
+                      <span className="ml-2 font-semibold text-amber-900">{p.pressure ?? '—'}MPa</span>
                     </div>
                   </div>
 

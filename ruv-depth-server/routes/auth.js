@@ -13,7 +13,7 @@ router.post('/signup', async (req, res) => {
     const hash = await bcrypt.hash(password, 10);
     const user = await User.create({ email, passwordHash: hash });
     const token = generateToken(user);
-    res.json({ token, user: { id: user._id, email: user.email } });
+    res.json({ token, user: { id: user._id, email: user.email, emailVerified: user.emailVerified, } });
   } catch (err) {
     console.error(err);
     res.status(400).json({ error: 'Email already used or invalid' });

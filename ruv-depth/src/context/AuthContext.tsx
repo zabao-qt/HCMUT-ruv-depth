@@ -35,9 +35,20 @@ export const AuthProvider: React.FC<{children:React.ReactNode}> = ({ children })
 
   const signup = async (email:string,password:string) => {
     const { data } = await authSignup(email,password);
-    localStorage.setItem('token', data.token);
-    setToken(data.token);
-    setUser(data.user);
+    const returnedToken = data?.token ?? null;
+    const returnedUser = data?.user ?? null;
+    if (returnedUser && returnedUser.emailVerified) {
+      if (returnedToken) {
+        localStorage.setItem('token', returnedToken);
+        setToken(returnedToken);
+      }
+      setUser(returnedUser);
+    } else {
+      // If not verified: don't auto-login. Leave signup flow to send OTP & verify step.
+      // Optionally keep user info in local state for UX, but don't set token.
+      setUser(null);
+    }
+    return data;
   };
   const login = async (email:string,password:string) => {
     const { data } = await authLogin(email,password);

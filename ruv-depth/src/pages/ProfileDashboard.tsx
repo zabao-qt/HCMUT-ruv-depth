@@ -2,24 +2,27 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
-import { appendPoint, deletePoints, getPoints } from '../services/api';
+import { appendPoint, deletePoints, getPoints, listProfiles } from '../services/api';
 import type { SensorPoint } from '../types/sensors';
 import type { Profile } from '../types/profiles';
+import { pressureToDepth } from '../utils/convert';
 
 import LiveReading from '../components/LiveReading';
 import LiveChart from '../components/LiveChart';
 import LiveMap from '../components/LiveMap';
 import RecentPoints from '../components/RecentPoints';
 import WifiStatus from '../components/WifiStatus';
+import ToggleSwitch from '../components/common/ToggleSwitch';
 
 export default function ProfileDashboard() {
   const { profileId } = useParams<{ profileId: string }>();
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
   const { token } = useAuth();
   const socketRef = useRef<Socket | null>(null);
 
   const STALE_MS = 30_000;
 
-  const [profileMeta, setProfileMeta] = useState<Profile | null>(null);
   const [current, setCurrent] = useState<SensorPoint | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [lastSeen, setLastSeen] = useState<number | null>(null);
@@ -28,6 +31,29 @@ export default function ProfileDashboard() {
   const [points, setPoints] = useState<SensorPoint[]>([]); // recorded points
   const [livePoints, setLivePoints] = useState<SensorPoint[]>([]); // streaming points (for chart & map)
   const [showRecorded, setShowRecorded] = useState<boolean>(false);
+  const [mode, setMode] = useState<'surface'|'underwater'>('surface');
+
+  useEffect(() => {
+    if (!profileId) return;
+    let cancelled = false;
+
+    (async () => {
+      setLoadingProfile(true);
+      try {
+        const res = await listProfiles();
+        const items: Profile[] = res.data?.profiles || [];
+        const found = items.find(p => (p.id ?? p._id) === profileId);
+        if (!cancelled) setProfile(found ?? null);
+      } catch (err) {
+        console.error('load profile err', err);
+        if (!cancelled) setProfile(null);
+      } finally {
+        if (!cancelled) setLoadingProfile(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [profileId]);
 
   // load recorded points on mount / profile change
   useEffect(() => {
@@ -186,12 +212,19 @@ export default function ProfileDashboard() {
     }
   };
 
+  const sonar = current?.sonarDepth ?? null;
+  const pressureRaw = current?.pressure ?? null;
+  const pressureDepth = pressureToDepth(pressureRaw);
+  const totalDepth = (sonar != null && pressureDepth != null) ? (sonar + pressureDepth) : null;
+
   return (
     <div className="max-w-6xl mx-auto p-6">
       <div className="bg-white p-6 rounded shadow">
         <header className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold">{profileMeta?.title ?? `Profile ${profileId}`}</h1>
+            <h1 className="text-2xl font-bold">
+              {loadingProfile ? 'Loading…' : (profile?.title ?? `Profile ${profileId}`)}
+            </h1>
             <div className="flex items-center gap-4">
               <p className="text-sm text-gray-500">
                 Live monitoring — connected: <span className="font-medium">{isConnected && feedFresh ? 'yes' : 'no'}</span>
@@ -202,8 +235,16 @@ export default function ProfileDashboard() {
                 <WifiStatus rssi={current?.rssi ?? null} isConnected={isConnected} feedFresh={feedFresh} />
               </div>
             </div>
+            <div>
+              <ToggleSwitch
+                checked={mode === 'underwater'}
+                onChange={(val) => setMode(val ? 'underwater' : 'surface')}
+                label={mode === 'underwater' ? 'Underwater' : 'Surface'}
+                ariaLabel="Toggle surface / underwater mode"
+              />
+            </div>
           </div>
-
+          
           <div className="flex items-center gap-3">
             {!isConnected ? (
               <button onClick={handleConnect} className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded shadow">Connect</button>
@@ -218,7 +259,7 @@ export default function ProfileDashboard() {
                         bg-blue-600 hover:bg-blue-700 
                         disabled:bg-gray-400 disabled:cursor-not-allowed disabled:hover:bg-gray-400"
             >
-              {saving ? 'Saving...' : 'Measure (append)'}
+              {saving ? 'Saving...' : 'Measure'}
             </button>
             <button
               onClick={() => setShowRecorded(s => !s)}
@@ -232,7 +273,7 @@ export default function ProfileDashboard() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="col-span-1">
-            <LiveReading current={current} />
+            <LiveReading current={current} mode={mode} pressureDepth={pressureDepth} totalDepth={totalDepth}/>
             <div className="mt-4">
               <RecentPoints points={points} onDelete={handleDeletePoint} />
             </div>

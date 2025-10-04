@@ -8,6 +8,7 @@ import mongoose from 'mongoose';
 import { Server } from 'socket.io';
 
 import authRoutes from './routes/auth.js';
+import authOtpRoutes from './routes/authOtp.js';
 import deviceRoutes from './routes/devices.js';
 import profileRoutes from './routes/profiles.js';
 import { initSockets } from './sockets/sockets.js';
@@ -38,6 +39,7 @@ mongoose.connect(process.env.MONGODB_URI)
 
 // mount routes
 app.use('/api/auth', authRoutes);
+app.use('/api/auth', authOtpRoutes);
 app.use('/api/devices', deviceRoutes);
 app.use('/api/profiles', profileRoutes);
 

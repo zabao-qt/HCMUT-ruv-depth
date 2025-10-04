@@ -21,6 +21,9 @@ api.interceptors.request.use((cfg) => {
 export const authSignup = (email: string, password: string) => api.post('/auth/signup', { email, password });
 export const authLogin = (email: string, password: string) => api.post('/auth/login', { email, password });
 export const authMe = () => api.get('/auth/me');
+export const sendOtp = (email: string, purpose = 'email_verification', name?: string) => api.post('/auth/send-otp', { email, purpose, name });
+export const verifyOtp = (email: string, code: string, purpose = 'email_verification') => api.post('/auth/verify-otp', { email, code, purpose });
+export const resendOtp = (email: string, purpose = 'email_verification') => api.post('/auth/resend-otp', { email, purpose });
 
 export const createProfile = (title:string, description?:string) => api.post('/profiles', { title, description });
 export const listProfiles = () => api.get('/profiles');
